@@ -24,6 +24,16 @@ export default function TabLayout() {
           backgroundColor: '#fff',
           borderTopWidth: 1,
           borderTopColor: '#E0E0E0',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+        tabBarIconStyle: {
+          marginTop: 2,
         },
       }}>
       <Tabs.Screen
@@ -39,8 +49,8 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="view-dashboard-outline" size={26} color={color} />
           ),
         }}
       />
@@ -48,17 +58,17 @@ export default function TabLayout() {
         name="fichas"
         options={{
           title: 'Fichas',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="clipboard-text" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="clipboard-text" size={26} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="nova-ficha"
         options={{
-          title: 'Nova Ficha',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="plus-circle" size={size} color={color} />
+          title: 'Nova',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="plus-circle" size={26} color={color} />
           ),
         }}
       />
@@ -66,8 +76,8 @@ export default function TabLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account-circle" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="account-circle" size={26} color={color} />
           ),
         }}
       />
