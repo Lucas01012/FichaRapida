@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Card, Text, Button } from 'react-native-paper';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Card, Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFichas } from '@/contexts/FichaContext';
@@ -19,19 +19,19 @@ export default function DashboardScreen() {
       title: 'Nova Ficha',
       icon: 'plus-circle',
       color: '#E53935',
-      action: () => router.push('/(tabs)/nova-ficha' as any),
+      route: '/nova-ficha',
     },
     {
       title: 'Fichas Cadastradas',
       icon: 'clipboard-text',
       color: '#1565C0',
-      action: () => router.push('/(tabs)/fichas' as any),
+      route: '/fichas',
     },
     {
       title: 'Perfil',
       icon: 'account-circle',
       color: '#43A047',
-      action: () => router.push('/(tabs)/perfil' as any),
+      route: '/perfil',
     },
   ];
 
@@ -74,7 +74,7 @@ export default function DashboardScreen() {
           <Card
             key={index}
             style={styles.menuCard}
-            onPress={item.action}
+            onPress={() => router.push(item.route as any)}
           >
             <Card.Content style={styles.menuContent}>
               <MaterialCommunityIcons name={item.icon as any} size={50} color={item.color} />

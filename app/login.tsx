@@ -17,13 +17,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login, isAuthenticated } = useAuth();
-
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/explore');
-    }
-  }, [isAuthenticated, router]);
+  const { login } = useAuth();
 
   const handleLogin = () => {
     if (!email || !password) {
@@ -36,16 +30,12 @@ export default function LoginScreen() {
       const success = login(email, password);
       setLoading(false);
       if (success) {
-        router.replace('/explore');
+        router.replace('/explore' as any);
       } else {
         Alert.alert('Erro', 'Falha ao fazer login');
       }
     }, 500);
   };
-
-  if (isAuthenticated) {
-    return null;
-  }
 
   return (
     <KeyboardAvoidingView
