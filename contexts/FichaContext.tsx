@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, ReactNode, useContext, useState } from 'react';
 
-// Interface baseada no backend FichaAtendimento.java
+// Interface baseada no backend FichaAtendimento.java e FichaDTO.java
 export interface Ficha {
   id: string;
   
@@ -53,10 +53,127 @@ export interface Ficha {
   horaSaidaHospital?: string;
   horaRetornoBase?: string;
   
-  // Status da ficha
+  // Dados do atendimento - Tipo de atendimento
+  atropelamento?: boolean;
+  suspeitaIam?: boolean;
+  queimaduras?: boolean;
+  psiquiatrico?: boolean;
+  transferencia?: boolean;
+  acidenteTransito?: boolean;
+  suspeitaAvc?: boolean;
+  intoxicacao?: boolean;
+  hipoHipertensao?: boolean;
+  obstetricia?: boolean;
+  agressao?: boolean;
+  queda?: boolean;
+  hipoHiperglicemia?: boolean;
+  alcoolizado?: boolean;
+  outrosTipoAtendimento?: string;
+  
+  // Situação local
+  morteObvia?: boolean;
+  chamadoFalso?: boolean;
+  evadiu?: boolean;
+  qta?: boolean;
+  outrosSituacaoLocal?: string;
+  descricaoCena?: string;
+  
+  // Dados clínicos - Avaliação primária
+  viaAereaLiberada?: boolean;
+  respiracao?: boolean;
+  circulacao?: boolean;
+  consciente?: boolean;
+  
+  // Pupilas
+  direitaMidriase?: boolean;
+  direitaIsocoria?: boolean;
+  direitaMiose?: boolean;
+  direitaReativa?: boolean;
+  esquerdaMidriase?: boolean;
+  esquerdaIsocoria?: boolean;
+  esquerdaMiose?: boolean;
+  esquerdaReativa?: boolean;
+  
+  // Sinais vitais
+  pressaoSistolica?: number;
+  pressaoDiastolica?: number;
+  frequenciaCardiaca?: number;
+  frequenciaRespiratoria?: number;
+  saturacao?: number;
+  dextro?: number;
+  temperatura?: number;
+  
+  // Pele
+  corada?: boolean;
+  cianotica?: boolean;
+  quente?: boolean;
+  fria?: boolean;
+  icterica?: boolean;
+  sudoreica?: boolean;
+  
+  // Antecedentes patológicos
+  iam?: boolean;
+  avc?: boolean;
+  diabetes?: boolean;
+  asmaBronquite?: boolean;
+  convulsao?: boolean;
+  has?: boolean;
+  ca?: boolean;
+  
+  // Medicamentos em uso
+  medicamentosEmUso?: string;
+  
+  // Alergias
+  alergias?: string;
+  
+  // Procedimentos realizados
+  canulaGuedel?: boolean;
+  oxigenio?: boolean;
+  oximetria?: boolean;
+  acessoVenoso?: boolean;
+  rcp?: boolean;
+  dea?: boolean;
+  colarCervical?: boolean;
+  prancha?: boolean;
+  ked?: boolean;
+  talas?: boolean;
+  contensaoPsq?: boolean;
+  kitParto?: boolean;
+  curativo?: boolean;
+  apoioUsa?: boolean;
+  procedimentosRealizadosOutros?: string;
+  
+  // Conduta
+  conduta?: string;
+  
+  // Médico regulador
+  medicoRegulador?: string;
+  
+  // Descrição dos pertences do paciente
+  pertences?: string;
+  
+  // Relatório de enfermagem
+  relatorioEnfermagem?: string;
+  
+  // Campos de isenção de responsabilidade
+  recusaAtendimento?: boolean;
+  confirmacaoComparecimento?: boolean;
+  altaLocal?: boolean;
+  
+  // Campos de assinatura e RG
+  assinaturaResponsavel?: string;
+  rgResponsavel?: string;
+  
+  // Campos de carimbo
+  carimboDestino?: string;
+  carimboRecebidoPor?: string;
+  carimboTecnicoEnfermagem?: string;
+  carimboSocorrista?: string;
+  
+  // Status da ficha (campo adicional do frontend)
   status: 'Em andamento' | 'Finalizada';
   
-  // Campos simplificados para exibição
+  // Campos simplificados para exibição (campo adicional do frontend)
   observacoes?: string;
 }
 

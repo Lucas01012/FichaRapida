@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Card, Text, Button, Divider } from 'react-native-paper';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { fichaService } from '@/app/services/api';
 import { useFichas } from '@/contexts/FichaContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { File, Paths } from 'expo-file-system';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import React, { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Button, Card, Divider, Text } from 'react-native-paper';
 
 export default function FichaDetalhesScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { getFichaById, updateFicha, deleteFicha } = useFichas();
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const ficha = getFichaById(id as string);
 
@@ -27,18 +31,96 @@ export default function FichaDetalhesScreen() {
     );
   }
 
-  const handleFinalize = () => {
-    Alert.alert('Finalizar Ficha', 'Deseja realmente finalizar esta ficha?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Finalizar',
-        style: 'default',
-        onPress: () => {
-          updateFicha(ficha.id, { status: 'Finalizada' });
-          Alert.alert('Sucesso', 'Ficha finalizada com sucesso!');
+  const handleFinalize = async () => {
+    Alert.alert(
+      'Finalizar Ficha', 
+      'Deseja realmente finalizar esta ficha? Um PDF será gerado automaticamente.', 
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Finalizar',
+          style: 'default',
+          onPress: async () => {
+            setIsGeneratingPdf(true);
+            
+            try {
+              // Atualiza o status da ficha
+              updateFicha(ficha.id, { status: 'Finalizada' });
+              
+              // Gera o PDF
+              await gerarEBaixarPdf();
+              
+            } catch (error) {
+              console.error('Erro ao finalizar ficha:', error);
+              Alert.alert(
+                'Erro', 
+                'Não foi possível gerar o PDF. Verifique se o backend está rodando e tente novamente.'
+              );
+            } finally {
+              setIsGeneratingPdf(false);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
+  };
+
+  const gerarEBaixarPdf = async () => {
+    try {
+      // Chama a API para gerar o PDF
+      const pdfBlob = await fichaService.gerarPdf(ficha.id);
+      
+      // Converte o blob para ArrayBuffer
+      const arrayBuffer = await pdfBlob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Define o caminho do arquivo usando a nova API
+      const fileName = `ficha_atendimento_${ficha.id}_${new Date().getTime()}.pdf`;
+      const file = new File(Paths.cache, fileName);
+      
+      // Salva o arquivo usando a nova API
+      await file.write(uint8Array);
+      
+      // Verifica se é possível compartilhar
+      const canShare = await Sharing.isAvailableAsync();
+      
+      if (canShare) {
+        // Compartilha o PDF
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Ficha de Atendimento',
+          UTI: 'com.adobe.pdf',
+        });
+        
+        Alert.alert(
+          'Sucesso', 
+          'Ficha finalizada e PDF gerado com sucesso!'
+        );
+      } else {
+        Alert.alert(
+          'Sucesso', 
+          `Ficha finalizada e PDF salvo em: ${file.uri}`
+        );
+      }
+      
+    } catch (error: any) {
+      console.error('Erro ao gerar PDF:', error);
+      
+      // Trata erros específicos
+      if (error.response) {
+        // Erro da API
+        if (error.response.status === 404) {
+          throw new Error('Ficha não encontrada no servidor');
+        } else if (error.response.status === 500) {
+          throw new Error('Erro no servidor ao gerar o PDF');
+        }
+      } else if (error.request) {
+        // Requisição foi feita mas não houve resposta
+        throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
+      }
+      
+      throw error;
+    }
   };
 
   const handleDelete = () => {
@@ -150,8 +232,10 @@ export default function FichaDetalhesScreen() {
             style={styles.button}
             buttonColor="#43A047"
             icon="check-circle"
+            loading={isGeneratingPdf}
+            disabled={isGeneratingPdf}
           >
-            Finalizar Ficha
+            {isGeneratingPdf ? 'Gerando PDF...' : 'Finalizar Ficha'}
           </Button>
         )}
 
