@@ -1,0 +1,13 @@
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\dto\FichaDTO.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\dto\SocorristaDTO.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\entities\FichaAtendimento.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\entities\Socorrista.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\mapper\FichaMapper.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\service\FichaService.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\service\PdfService.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\business\service\SocorristaService.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\controller\FichaAtendimentoController.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\FicharapidaApplication.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\infrastructure\config\CorsConfig.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\infrastructure\repository\FichaAtendimentoRepository.java
+C:\Users\kenzinhan\ficharapidafrontend\FichaRapida\backend\src\main\java\com\devficha\ficharapida\infrastructure\repository\SocorristaRepository.java
