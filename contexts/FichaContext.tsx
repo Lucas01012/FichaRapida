@@ -1,4 +1,5 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
+import { fichaService } from '../app/services/api';
 
 // Interface baseada no backend FichaAtendimento.java e FichaDTO.java
 export interface Ficha {
@@ -183,57 +184,34 @@ interface FichaContextData {
   updateFicha: (id: string, ficha: Partial<Ficha>) => void;
   deleteFicha: (id: string) => void;
   getFichaById: (id: string) => Ficha | undefined;
+  finalizarFicha: (id: string) => Promise<void>;
 }
 
 const FichaContext = createContext<FichaContextData>({} as FichaContextData);
 
 export function FichaProvider({ children }: { children: ReactNode }) {
-  const [fichas, setFichas] = useState<Ficha[]>([
-    {
-      id: '1',
-      dataAtendimento: '2025-11-03',
-      motivoSolicitacao: 'Emergência médica - Dor torácica',
-      nomeVitima: 'Maria Santos',
-      idadeVitima: 45,
-      horaChamado: '10:30',
-      residencia: true,
-      vermelha: true,
-      enderecoOcorrencia: 'Rua das Flores, 123',
-      observacoes: 'Paciente apresenta dor torácica há 2 horas',
-      status: 'Em andamento',
-    },
-    {
-      id: '2',
-      dataAtendimento: '2025-11-03',
-      motivoSolicitacao: 'Acidente - Trauma',
-      nomeVitima: 'Carlos Oliveira',
-      idadeVitima: 32,
-      horaChamado: '09:15',
-      viaPublica: true,
-      amarela: true,
-      enderecoOcorrencia: 'Avenida Principal, 456',
-      observacoes: 'Queda de moto, fratura exposta no antebraço direito',
-      status: 'Finalizada',
-    },
-    {
-      id: '3',
-      dataAtendimento: '2025-11-03',
-      motivoSolicitacao: 'Crise psiquiátrica',
-      nomeVitima: 'Ana Paula Costa',
-      idadeVitima: 28,
-      horaChamado: '11:00',
-      residencia: true,
-      verde: true,
-      enderecoOcorrencia: 'Rua das Palmeiras, 789',
-      observacoes: 'Hiperventilação, tremores',
-      status: 'Em andamento',
-    },
-  ]);
+  const [fichas, setFichas] = useState<Ficha[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Carrega fichas do backend ao inicializar
+  React.useEffect(() => {
+    // Opcional: buscar fichas do backend ao iniciar
+    fichaService.buscarTodasFichas()
+      .then((response) => {
+        if (response && Array.isArray(response)) {
+          setFichas(response);
+        }
+      })
+      .catch((error) => {
+        console.error('Erro ao buscar fichas:', error);
+      });
+  }, []);
 
   const addFicha = (ficha: Omit<Ficha, 'id'>) => {
     const newFicha: Ficha = {
       ...ficha,
       id: Date.now().toString(),
+      status: 'Em andamento',
     };
     setFichas((prev) => [newFicha, ...prev]);
   };
@@ -247,9 +225,36 @@ export function FichaProvider({ children }: { children: ReactNode }) {
   const deleteFicha = (id: string) => {
     setFichas((prev) => prev.filter((ficha) => ficha.id !== id));
   };
+  // Função para finalizar ficha: envia ao backend, gera PDF e faz download
+  const finalizarFicha = async (id: string) => {
+    const ficha = getFichaById(id);
+    if (!ficha) {
+      console.error('Ficha não encontrada para finalizar');
+      return;
+    }
+    try {
+      // Envia ficha para o backend
+      const fichaBackend = await fichaService.criarFicha(ficha);
+      // Gera PDF
+      const pdfBlob = await fichaService.gerarPdf(fichaBackend.id);
+      // Faz download do PDF
+      const url = window.URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ficha_${fichaBackend.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      // Atualiza status local
+      updateFicha(id, { status: 'Finalizada' });
+    } catch (error) {
+      console.error('Erro ao finalizar ficha:', error);
+    }
+  };
 
   const getFichaById = (id: string) => {
-    return fichas.find((ficha) => ficha.id === id);
+    return fichas.find((f) => f.id === id);
   };
 
   return (
@@ -260,6 +265,7 @@ export function FichaProvider({ children }: { children: ReactNode }) {
         updateFicha,
         deleteFicha,
         getFichaById,
+        finalizarFicha,
       }}
     >
       {children}

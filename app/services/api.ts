@@ -59,6 +59,45 @@ export const fichaService = {
       throw error;
     }
   },
+
+  /**
+   * Busca todas as fichas
+   */
+  buscarTodasFichas: async () => {
+    try {
+      const response = await api.get('/fichas');
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar todas as fichas:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Atualiza uma ficha
+   */
+  atualizarFicha: async (id: string, ficha: Partial<any>) => {
+    try {
+      const response = await api.put(`/fichas/${id}`, ficha);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao atualizar ficha:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Deleta uma ficha
+   */
+  deletarFicha: async (id: string) => {
+    try {
+      await api.delete(`/fichas/${id}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar ficha:', error);
+      throw error;
+    }
+  },
 };
 
 export default api;
