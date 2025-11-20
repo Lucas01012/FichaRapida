@@ -44,17 +44,91 @@ export default function FichaDetalhesScreen() {
             setIsGeneratingPdf(true);
             
             try {
-              // Atualiza o status da ficha
-              updateFicha(ficha.id, { status: 'Finalizada' });
+              console.log('=== INICIANDO FINALIZAÇÃO ===');
+              console.log('ID local da ficha:', ficha.id, '(tipo:', typeof ficha.id, ')');
               
-              // Gera o PDF
-              await gerarEBaixarPdf();
+              // PASSO 1: Enviar ficha ao backend
+              console.log('PASSO 1: Enviando ficha ao backend...');
+              console.log('Dados da ficha:', {
+                nomeVitima: ficha.nomeVitima,
+                idadeVitima: ficha.idadeVitima,
+                dataAtendimento: ficha.dataAtendimento,
+                motivoSolicitacao: ficha.motivoSolicitacao,
+              });
               
-            } catch (error) {
-              console.error('Erro ao finalizar ficha:', error);
+              const fichaBackend = await fichaService.criarFicha(ficha);
+              
+              console.log('✅ Ficha criada no backend com sucesso!');
+              console.log('ID retornado pelo backend:', fichaBackend.id, '(tipo:', typeof fichaBackend.id, ')');
+              
+              // Validação crítica: verificar se recebemos um ID válido
+              if (!fichaBackend.id) {
+                throw new Error('Backend não retornou um ID válido. Verifique a resposta do servidor.');
+              }
+              
+              // PASSO 2: Gerar PDF usando o ID do backend
+              console.log('PASSO 2: Gerando PDF com ID do backend:', fichaBackend.id);
+              await gerarEBaixarPdf(fichaBackend.id);
+              
+              // PASSO 3: Atualizar status local
+              console.log('PASSO 3: Atualizando status local...');
+              updateFicha(ficha.id, { 
+                status: 'Finalizada',
+              });
+              
+              console.log('=== FINALIZAÇÃO CONCLUÍDA COM SUCESSO ===');
+              
+            } catch (error: any) {
+              console.error('=== ERRO NA FINALIZAÇÃO ===');
+              console.error('Tipo de erro:', error.name);
+              console.error('Mensagem:', error.message);
+              
+              let mensagemErro = 'Não foi possível finalizar a ficha. ';
+              let detalhesTecnicos = '';
+              
+              if (error.response) {
+                // Erro da API com resposta do servidor
+                const status = error.response.status;
+                console.error('Status HTTP:', status);
+                console.error('Dados da resposta:', error.response.data);
+                
+                if (status === 404) {
+                  mensagemErro += 'Ficha não encontrada no servidor (404).';
+                  detalhesTecnicos = 'O ID da ficha pode estar incorreto ou a rota não existe.';
+                } else if (status === 500) {
+                  mensagemErro += 'Erro interno no servidor (500).';
+                  detalhesTecnicos = 'Verifique os logs do backend para mais detalhes.';
+                } else if (status === 400) {
+                  mensagemErro += 'Dados inválidos (400).';
+                  detalhesTecnicos = JSON.stringify(error.response.data);
+                } else {
+                  mensagemErro += `Erro do servidor (${status}).`;
+                }
+              } else if (error.request) {
+                // Requisição foi feita mas não houve resposta
+                console.error('Requisição enviada mas sem resposta');
+                mensagemErro += 'Não foi possível conectar ao servidor.';
+                detalhesTecnicos = 'Verifique se o backend está rodando em http://localhost:8080';
+              } else {
+                // Outro tipo de erro
+                console.error('Erro ao configurar requisição:', error.message);
+                mensagemErro += error.message || 'Erro desconhecido';
+              }
+              
+              // Mostrar erro detalhado
               Alert.alert(
                 'Erro', 
-                'Não foi possível gerar o PDF. Verifique se o backend está rodando e tente novamente.'
+                mensagemErro + '\n\n' + detalhesTecnicos,
+                [
+                  { text: 'OK' },
+                  {
+                    text: 'Ver Logs',
+                    onPress: () => {
+                      console.log('=== LOGS COMPLETOS DO ERRO ===');
+                      console.log(error);
+                    }
+                  }
+                ]
               );
             } finally {
               setIsGeneratingPdf(false);
@@ -65,24 +139,46 @@ export default function FichaDetalhesScreen() {
     );
   };
 
-  const gerarEBaixarPdf = async () => {
+  /**
+   * Gera e faz download do PDF
+   * @param fichaIdBackend - ID numérico retornado pelo backend
+   */
+  const gerarEBaixarPdf = async (fichaIdBackend: number) => {
     try {
-      // Chama a API para gerar o PDF
-      const pdfBlob = await fichaService.gerarPdf(ficha.id);
+      console.log('>>> Iniciando geração de PDF');
+      console.log('>>> ID da ficha:', fichaIdBackend, '(tipo:', typeof fichaIdBackend, ')');
+      
+      // Chama a API para gerar o PDF usando o ID do backend
+      const pdfBlob = await fichaService.gerarPdf(fichaIdBackend);
+      
+      console.log('>>> PDF recebido do backend');
+      console.log('>>> Tamanho do blob:', pdfBlob.size, 'bytes');
+      
+      if (pdfBlob.size === 0) {
+        throw new Error('PDF gerado está vazio (0 bytes)');
+      }
       
       // Converte o blob para ArrayBuffer
       const arrayBuffer = await pdfBlob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
+      console.log('>>> Convertido para Uint8Array, tamanho:', uint8Array.length);
+      
       // Define o caminho do arquivo usando a nova API
-      const fileName = `ficha_atendimento_${ficha.id}_${new Date().getTime()}.pdf`;
+      const fileName = `ficha_atendimento_${fichaIdBackend}_${new Date().getTime()}.pdf`;
       const file = new File(Paths.cache, fileName);
+      
+      console.log('>>> Salvando arquivo:', fileName);
+      console.log('>>> Caminho:', file.uri);
       
       // Salva o arquivo usando a nova API
       await file.write(uint8Array);
       
+      console.log('>>> Arquivo salvo com sucesso');
+      
       // Verifica se é possível compartilhar
       const canShare = await Sharing.isAvailableAsync();
+      console.log('>>> Compartilhamento disponível:', canShare);
       
       if (canShare) {
         // Compartilha o PDF
@@ -104,19 +200,29 @@ export default function FichaDetalhesScreen() {
       }
       
     } catch (error: any) {
-      console.error('Erro ao gerar PDF:', error);
+      console.error('>>> Erro ao gerar/salvar PDF:', error);
       
       // Trata erros específicos
       if (error.response) {
-        // Erro da API
-        if (error.response.status === 404) {
-          throw new Error('Ficha não encontrada no servidor');
-        } else if (error.response.status === 500) {
-          throw new Error('Erro no servidor ao gerar o PDF');
+        const status = error.response.status;
+        console.error('>>> Status HTTP:', status);
+        
+        if (status === 404) {
+          throw new Error(
+            'Ficha não encontrada no servidor. ' +
+            'O ID pode estar incorreto ou a ficha foi deletada.'
+          );
+        } else if (status === 500) {
+          throw new Error(
+            'Erro no servidor ao gerar o PDF. ' +
+            'Verifique se o PdfService está implementado corretamente.'
+          );
         }
       } else if (error.request) {
-        // Requisição foi feita mas não houve resposta
-        throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
+        throw new Error(
+          'Não foi possível conectar ao servidor. ' +
+          'Verifique se o backend está rodando.'
+        );
       }
       
       throw error;
@@ -131,124 +237,75 @@ export default function FichaDetalhesScreen() {
         style: 'destructive',
         onPress: () => {
           deleteFicha(ficha.id);
-          Alert.alert('Sucesso', 'Ficha excluída com sucesso!', [
-            { text: 'OK', onPress: () => router.back() },
-          ]);
+          Alert.alert('Sucesso', 'Ficha excluída com sucesso!');
+          router.back();
         },
       },
     ]);
   };
 
-  const InfoRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (
-    <View style={styles.infoRow}>
-      <View style={styles.infoLabel}>
-        <MaterialCommunityIcons name={icon as any} size={20} color="#1565C0" />
-        <Text variant="labelLarge" style={styles.labelText}>
-          {label}
-        </Text>
-      </View>
-      <Text variant="bodyLarge" style={styles.valueText}>
-        {value}
-      </Text>
-    </View>
-  );
-
   return (
     <ScrollView style={styles.container}>
       <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.header}>
-            <MaterialCommunityIcons name="clipboard-text" size={40} color="#1565C0" />
-            <Text variant="headlineSmall" style={styles.title}>
-              Ficha de Atendimento
+        <Card.Title 
+          title={`Ficha de ${ficha.nomeVitima}`}
+          subtitle={`Data: ${ficha.dataAtendimento}`}
+        />
+        <Divider />
+        
+        <Card.Content style={styles.content}>
+          <View style={styles.section}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Informações da Vítima
             </Text>
-          </View>
-
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: ficha.status === 'Em andamento' ? '#FFF3E0' : '#E8F5E9',
-              },
-            ]}
-          >
-            <Text
-              variant="titleMedium"
-              style={[
-                styles.statusText,
-                { color: ficha.status === 'Em andamento' ? '#F57C00' : '#43A047' },
-              ]}
-            >
-              {ficha.status}
-            </Text>
+            <Text>Nome: {ficha.nomeVitima}</Text>
+            <Text>Idade: {ficha.idadeVitima} anos</Text>
+            {ficha.enderecoVitima && <Text>Endereço: {ficha.enderecoVitima}</Text>}
           </View>
 
           <Divider style={styles.divider} />
 
-          <InfoRow icon="account" label="Nome da Vítima" value={ficha.nomeVitima} />
-          <InfoRow icon="calendar" label="Idade" value={`${ficha.idadeVitima} anos`} />
-          <InfoRow icon="clock-outline" label="Data do Atendimento" value={ficha.dataAtendimento} />
-          <InfoRow icon="clock-outline" label="Hora do Chamado" value={ficha.horaChamado || 'N/A'} />
-          <InfoRow icon="alert-circle-outline" label="Motivo da Solicitação" value={ficha.motivoSolicitacao} />
-          <InfoRow icon="map-marker" label="Local" value={ficha.enderecoOcorrencia || 'Não informado'} />
-          
-          {(ficha.vermelha || ficha.amarela || ficha.verde || ficha.azul) && (
-            <InfoRow 
-              icon="alert" 
-              label="Classificação de Risco" 
-              value={
-                ficha.vermelha ? 'Vermelha (Emergência)' :
-                ficha.amarela ? 'Amarela (Urgência)' :
-                ficha.verde ? 'Verde (Pouco Urgente)' :
-                ficha.azul ? 'Azul (Não Urgente)' : 'Não classificada'
-              } 
-            />
-          )}
+          <View style={styles.section}>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Detalhes do Atendimento
+            </Text>
+            <Text>Motivo: {ficha.motivoSolicitacao}</Text>
+            <Text>Status: {ficha.status}</Text>
+          </View>
 
           {ficha.observacoes && (
             <>
               <Divider style={styles.divider} />
-              <View style={styles.observationsContainer}>
-                <View style={styles.infoLabel}>
-                  <MaterialCommunityIcons name="note-text" size={20} color="#1565C0" />
-                  <Text variant="labelLarge" style={styles.labelText}>
-                    Observações
-                  </Text>
-                </View>
-                <Text variant="bodyMedium" style={styles.observationsText}>
-                  {ficha.observacoes}
+              <View style={styles.section}>
+                <Text variant="titleMedium" style={styles.sectionTitle}>
+                  Observações
                 </Text>
+                <Text>{ficha.observacoes}</Text>
               </View>
             </>
           )}
         </Card.Content>
-      </Card>
 
-      <View style={styles.buttonsContainer}>
-        {ficha.status === 'Em andamento' && (
-          <Button
-            mode="contained"
+        <Card.Actions style={styles.actions}>
+          <Button 
+            mode="contained" 
             onPress={handleFinalize}
-            style={styles.button}
-            buttonColor="#43A047"
-            icon="check-circle"
             loading={isGeneratingPdf}
-            disabled={isGeneratingPdf}
+            disabled={ficha.status === 'Finalizada' || isGeneratingPdf}
+            style={styles.finalizeButton}
           >
-            {isGeneratingPdf ? 'Gerando PDF...' : 'Finalizar Ficha'}
+            {isGeneratingPdf ? 'Gerando PDF...' : 'Finalizar e Gerar PDF'}
           </Button>
-        )}
-
-        <Button
-          mode="outlined"
-          onPress={handleDelete}
-          style={styles.button}
-          textColor="#E53935"
-          icon="delete"
-        >
-          Excluir Ficha
-        </Button>
-      </View>
+          <Button 
+            mode="outlined" 
+            onPress={handleDelete}
+            disabled={isGeneratingPdf}
+            textColor="#E53935"
+          >
+            Excluir
+          </Button>
+        </Card.Actions>
+      </Card>
     </ScrollView>
   );
 }
@@ -256,74 +313,42 @@ export default function FichaDetalhesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#f5f5f5',
   },
   card: {
-    margin: 15,
-    elevation: 3,
+    margin: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
+  content: {
+    paddingTop: 16,
   },
-  title: {
-    marginLeft: 15,
-    fontWeight: 'bold',
+  section: {
+    marginBottom: 16,
   },
-  statusBadge: {
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  statusText: {
+  sectionTitle: {
+    marginBottom: 8,
     fontWeight: 'bold',
   },
   divider: {
-    marginVertical: 15,
+    marginVertical: 16,
   },
-  infoRow: {
-    marginBottom: 15,
-  },
-  infoLabel: {
+  actions: {
+    justifyContent: 'flex-end',
+    padding: 16,
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
+    gap: 8,
   },
-  labelText: {
-    marginLeft: 8,
-    color: '#666',
-  },
-  valueText: {
-    marginLeft: 28,
-    fontWeight: '500',
-  },
-  observationsContainer: {
-    marginTop: 10,
-  },
-  observationsText: {
-    marginLeft: 28,
-    marginTop: 5,
-    lineHeight: 22,
-  },
-  buttonsContainer: {
-    padding: 15,
-    gap: 10,
-  },
-  button: {
-    paddingVertical: 5,
+  finalizeButton: {
+    marginRight: 8,
   },
   errorCard: {
-    margin: 50,
-    elevation: 0,
+    margin: 16,
+    padding: 24,
   },
   errorContent: {
     alignItems: 'center',
-    paddingVertical: 40,
+    gap: 16,
   },
   errorText: {
-    marginTop: 15,
-    color: '#E53935',
+    textAlign: 'center',
   },
 });

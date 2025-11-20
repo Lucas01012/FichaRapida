@@ -14,34 +14,75 @@ const api = axios.create({
   },
 });
 
+// Interceptor para logging de requisições (útil para debug)
+api.interceptors.request.use(
+  (config) => {
+    console.log('🚀 Requisição:', config.method?.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => {
+    console.error('❌ Erro na requisição:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para logging de respostas (útil para debug)
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ Resposta:', response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error('❌ Erro na resposta:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      data: error.response?.data,
+    });
+    return Promise.reject(error);
+  }
+);
+
 export const fichaService = {
   /**
    * Gera o PDF de uma ficha de atendimento
-   * @param fichaId - ID da ficha
+   * @param fichaId - ID da ficha (número retornado pelo backend)
    * @returns Promise com os dados binários do PDF
    */
-  gerarPdf: async (fichaId: string): Promise<Blob> => {
+  gerarPdf: async (fichaId: number | string): Promise<Blob> => {
     try {
+      console.log('📄 Gerando PDF para ficha ID:', fichaId, '(tipo:', typeof fichaId, ')');
+      
       const response = await api.get(`/fichas/${fichaId}/pdf`, {
         responseType: 'blob',
       });
+      
+      console.log('✅ PDF gerado com sucesso, tamanho:', response.data.size, 'bytes');
       return response.data;
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao gerar PDF:', {
+        fichaId,
+        status: error.response?.status,
+        message: error.message,
+      });
       throw error;
     }
   },
 
   /**
    * Busca uma ficha por ID
-   * @param fichaId - ID da ficha
+   * @param fichaId - ID da ficha (número)
    */
-  buscarFicha: async (fichaId: string) => {
+  buscarFicha: async (fichaId: number | string) => {
     try {
+      console.log('🔍 Buscando ficha ID:', fichaId);
       const response = await api.get(`/fichas/${fichaId}`);
+      console.log('✅ Ficha encontrada:', response.data);
       return response.data;
-    } catch (error) {
-      console.error('Erro ao buscar ficha:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar ficha:', {
+        fichaId,
+        status: error.response?.status,
+      });
       throw error;
     }
   },
@@ -49,13 +90,35 @@ export const fichaService = {
   /**
    * Cria uma nova ficha
    * @param ficha - Dados da ficha
+   * @returns Ficha criada com ID gerado pelo backend
    */
   criarFicha: async (ficha: any) => {
     try {
+      console.log('➕ Criando nova ficha:', {
+        nomeVitima: ficha.nomeVitima,
+        idadeVitima: ficha.idadeVitima,
+      });
+      
       const response = await api.post('/fichas', ficha);
+      
+      console.log('✅ Ficha criada com sucesso:', {
+        id: response.data.id,
+        tipo: typeof response.data.id,
+      });
+      
+      // Validação: garantir que o backend retornou um ID
+      if (!response.data.id) {
+        console.error('⚠️ ATENÇÃO: Backend não retornou ID na resposta!');
+        throw new Error('Backend não retornou ID da ficha criada');
+      }
+      
       return response.data;
-    } catch (error) {
-      console.error('Erro ao criar ficha:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao criar ficha:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
       throw error;
     }
   },
@@ -65,10 +128,12 @@ export const fichaService = {
    */
   buscarTodasFichas: async () => {
     try {
+      console.log('📋 Buscando todas as fichas...');
       const response = await api.get('/fichas');
+      console.log('✅ Fichas encontradas:', response.data.length);
       return response.data;
-    } catch (error) {
-      console.error('Erro ao buscar todas as fichas:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar todas as fichas:', error.response?.status);
       throw error;
     }
   },
@@ -76,12 +141,17 @@ export const fichaService = {
   /**
    * Atualiza uma ficha
    */
-  atualizarFicha: async (id: string, ficha: Partial<any>) => {
+  atualizarFicha: async (id: number | string, ficha: Partial<any>) => {
     try {
+      console.log('✏️ Atualizando ficha ID:', id);
       const response = await api.put(`/fichas/${id}`, ficha);
+      console.log('✅ Ficha atualizada');
       return response.data;
-    } catch (error) {
-      console.error('Erro ao atualizar ficha:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao atualizar ficha:', {
+        id,
+        status: error.response?.status,
+      });
       throw error;
     }
   },
@@ -89,12 +159,17 @@ export const fichaService = {
   /**
    * Deleta uma ficha
    */
-  deletarFicha: async (id: string) => {
+  deletarFicha: async (id: number | string) => {
     try {
+      console.log('🗑️ Deletando ficha ID:', id);
       await api.delete(`/fichas/${id}`);
+      console.log('✅ Ficha deletada');
       return true;
-    } catch (error) {
-      console.error('Erro ao deletar ficha:', error);
+    } catch (error: any) {
+      console.error('❌ Erro ao deletar ficha:', {
+        id,
+        status: error.response?.status,
+      });
       throw error;
     }
   },
