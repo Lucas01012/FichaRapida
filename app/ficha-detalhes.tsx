@@ -1,7 +1,7 @@
 import { fichaService } from '@/app/services/api';
 import { useFichas } from '@/contexts/FichaContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { File, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useState } from 'react';
@@ -56,7 +56,12 @@ export default function FichaDetalhesScreen() {
                 motivoSolicitacao: ficha.motivoSolicitacao,
               });
               
-              const fichaBackend = await fichaService.criarFicha(ficha);
+              // CRÍTICO: Remover o campo 'id' e 'status' antes de enviar ao backend
+              // O backend vai gerar o ID automaticamente (auto-increment)
+              const { id, status, ...fichaSemId } = ficha;
+              
+              console.log('📦 Enviando ficha SEM id (será gerado pelo backend)');
+              const fichaBackend = await fichaService.criarFicha(fichaSemId);
               
               console.log('✅ Ficha criada no backend com sucesso!');
               console.log('ID retornado pelo backend:', fichaBackend.id, '(tipo:', typeof fichaBackend.id, ')');
@@ -149,30 +154,27 @@ export default function FichaDetalhesScreen() {
       console.log('>>> ID da ficha:', fichaIdBackend, '(tipo:', typeof fichaIdBackend, ')');
       
       // Chama a API para gerar o PDF usando o ID do backend
-      const pdfBlob = await fichaService.gerarPdf(fichaIdBackend);
+      // Retorna base64
+      const pdfBase64 = await fichaService.gerarPdf(fichaIdBackend);
       
-      console.log('>>> PDF recebido do backend');
-      console.log('>>> Tamanho do blob:', pdfBlob.size, 'bytes');
+      console.log('>>> PDF recebido do backend (base64)');
+      console.log('>>> Tamanho aproximado:', pdfBase64.length, 'caracteres');
       
-      if (pdfBlob.size === 0) {
-        throw new Error('PDF gerado está vazio (0 bytes)');
+      if (!pdfBase64 || pdfBase64.length === 0) {
+        throw new Error('PDF gerado está vazio');
       }
       
-      // Converte o blob para ArrayBuffer
-      const arrayBuffer = await pdfBlob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      
-      console.log('>>> Convertido para Uint8Array, tamanho:', uint8Array.length);
-      
-      // Define o caminho do arquivo usando a nova API
+      // Define o caminho do arquivo
       const fileName = `ficha_atendimento_${fichaIdBackend}_${new Date().getTime()}.pdf`;
-      const file = new File(Paths.cache, fileName);
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
       
       console.log('>>> Salvando arquivo:', fileName);
-      console.log('>>> Caminho:', file.uri);
+      console.log('>>> Caminho:', fileUri);
       
-      // Salva o arquivo usando a nova API
-      await file.write(uint8Array);
+      // Salva o arquivo usando a API legacy do FileSystem
+      await FileSystem.writeAsStringAsync(fileUri, pdfBase64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       
       console.log('>>> Arquivo salvo com sucesso');
       
@@ -182,7 +184,7 @@ export default function FichaDetalhesScreen() {
       
       if (canShare) {
         // Compartilha o PDF
-        await Sharing.shareAsync(file.uri, {
+        await Sharing.shareAsync(fileUri, {
           mimeType: 'application/pdf',
           dialogTitle: 'Ficha de Atendimento',
           UTI: 'com.adobe.pdf',
@@ -195,7 +197,7 @@ export default function FichaDetalhesScreen() {
       } else {
         Alert.alert(
           'Sucesso', 
-          `Ficha finalizada e PDF salvo em: ${file.uri}`
+          `Ficha finalizada e PDF salvo em: ${fileUri}`
         );
       }
       

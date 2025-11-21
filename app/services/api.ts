@@ -48,25 +48,29 @@ export const fichaService = {
    * @param fichaId - ID da ficha (número retornado pelo backend)
    * @returns Promise com os dados binários do PDF
    */
-  gerarPdf: async (fichaId: number | string): Promise<Blob> => {
-    try {
-      console.log('📄 Gerando PDF para ficha ID:', fichaId, '(tipo:', typeof fichaId, ')');
-      
-      const response = await api.get(`/fichas/${fichaId}/pdf`, {
-        responseType: 'blob',
-      });
-      
-      console.log('✅ PDF gerado com sucesso, tamanho:', response.data.size, 'bytes');
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ Erro ao gerar PDF:', {
-        fichaId,
-        status: error.response?.status,
-        message: error.message,
-      });
-      throw error;
+gerarPdf: async (fichaId: number | string): Promise<string> => {
+  try {
+    console.log('📄 Gerando PDF para ficha ID:', fichaId);
+    
+    const response = await api.get(`/fichas/${fichaId}/pdf`, {
+      responseType: 'arraybuffer',
+    });
+    
+    // Converte para base64
+    const uint8Array = new Uint8Array(response.data);
+    let binary = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
     }
-  },
+    const base64 = btoa(binary);
+    
+    console.log('✅ PDF gerado com sucesso');
+    return base64;
+  } catch (error: any) {
+    console.error('❌ Erro ao gerar PDF:', error);
+    throw error;
+  }
+},
 
   /**
    * Busca uma ficha por ID
